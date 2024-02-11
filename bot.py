@@ -5,7 +5,7 @@ from telebot.storage import StateMemoryStorage, StateStorageBase
 from telebot.types import InlineKeyboardButton, ReplyKeyboardMarkup, Message
 from pandas import read_csv
 from os.path import exists
-from inspect import currentframe
+from inspect import stack
 
 from info_text import major
 
@@ -59,7 +59,7 @@ class SynthesisLabsBot(TeleBot):
                 cls.send_message(
                     chat_id=message.from_user.id,
                     text=f'Возникла ошибка при попытке вызвать метод\
-                        {currentframe}.'
+                        {stack()[1][-2]}.'
                 )
             else:
                 cls.send_message(
@@ -95,17 +95,9 @@ class SynthesisLabsBot(TeleBot):
 
         all_form_conditions_met = all([
             isinstance(scalp_message[0], int),
-
             isinstance(scalp_message[1], int),
-
             scalp_message[2].__contains__('kick'),
-
-            isinstance(
-                scalp_message[3:], list
-            ) and isinstance(
-                scalp_message[3:], str
-            )
-        ])
+            isinstance(scalp_message[3:], list)])
 
         if len(scalp_message) and all_form_conditions_met:
             return True
