@@ -76,7 +76,6 @@ def handle_text(message):
 
     if not member(GROUP_CHAT_ID, message.from_user.id):
         bot.send_message(current_chat, major['enroll'][2])
-        bot.register_next_step_handler(message, get_name)
 
         if message.text == major['enroll'][0]:
             enroll_in_process = True
