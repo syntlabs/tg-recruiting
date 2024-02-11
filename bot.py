@@ -95,9 +95,16 @@ class SynthesisLabsBot(TeleBot):
 
         all_form_conditions_met = all([
             isinstance(scalp_message[0], int),
+
             isinstance(scalp_message[1], int),
+
             scalp_message[2].__contains__('kick'),
-            isinstance(scalp_message[3], str)
+
+            isinstance(
+                scalp_message[3:], list
+            ) and isinstance(
+                scalp_message[3:], str
+            )
         ])
 
         if len(scalp_message) and all_form_conditions_met:
