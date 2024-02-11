@@ -257,7 +257,9 @@ def get_rules(message):
         rules = message.text
         data = 'ФИО: ' + name + '\nГород: ' + city + '\nДата рождения: ' + age + '\nНавыки и умения: ' + skills + '\nОпыт блокчейн разработки: ' + politics + '\nОпыт дизайна: ' + nap +'\nСоциальные сети: ' + socials + '\nОткуда узнал о нас: ' + rules
         hash = hash_prefix + sha3_512(data.encode('utf-8')).hexdigest()
-        bot.send_message(test_chat_id, [str(message.chat.id) + '\n' + str(message.from_user.first_name) + '\n' + str(message.from_user.username) + '\n' + str(data) + '\n' + str(hash)])
+        bot.send_message(
+            test_chat_id, 
+            [str(message.chat.id) + '\n' + str(message.from_user.first_name) + '\n' + str(message.from_user.username) + '\n' + str(data) + '\n' + str(hash)])
         bot.send_message(message.from_user.id, success_enroll)
 
 def exit(message):
