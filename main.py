@@ -1,4 +1,3 @@
-from typing import Any, Optional
 from telebot.apihelper import ApiTelegramException
 from hashlib import sha3_512
 from os import environ, getenv
@@ -23,6 +22,11 @@ MAIN_CHAT_ID = environ.get('MAIN_CHAT_ID')
 enroll_in_process = False
 
 superusers = (900659397, 5116022329,)
+super_actions = (
+        ('kick', 'ban'),
+        ('add', 'invite'),
+        ('delete', 'clear', 'clean', 'remove')
+    )
 
 bot = SynthesisLabsBot(token=str(TOKEN))
 
@@ -32,6 +36,13 @@ def start(message, res=False):
     bot.send_message(
         message.chat.id, major['start'], reply_markup=bot.keyboard_buttons
     )
+
+
+def superuser_only(func):
+    def super_wrapper(*args, **kwargs):
+        if bot.is_super_user:
+            return func(*args, **kwargs)
+    return super_wrapper
 
 
 def any_button_pressed(message) -> bool:
@@ -72,11 +83,6 @@ def super_hasher(data: list) -> str:
     )
 
 
-def is_super_user(member_id: int) -> bool:
-
-    return True if member_id in superusers else False
-
-
 def clean_denied_user_data(user_id: int) -> None:
 
     bot.send_message(
@@ -102,38 +108,39 @@ def handle_text(message: Message) -> None:
 
         msg_diff = message[-1].message_id - bot.id_pointer
 
-        id_slice = len(major['qustons'])
+        qustons_count = len(major['qustons'])
 
         if any_button_pressed(message):
 
             enroll_stopped(message)
             enroll_in_process = False
-        elif msg_diff == id_slice:
+        elif msg_diff == qustons_count:
 
-            data = catch_data(messages=message[-id_slice:])
+            data = catch_data(messages=message[-qustons_count:])
             hasher = super_hasher(data)
 
             send_data_to_admin(message, data, hasher)
 
         bot.send_message(current_chat, text=major['qustons'][msg_diff])
 
-    if is_super_user(message.from_user.id):
-        super_message = message.text.split(' ')
-        if 'kick' in super_message:
-            bot.kick_member(
-                message=message,
-                user_id=super_message[0],
-                chat_id=super_message[1],
-                reason=super_message[3:] if len(super_message) > 3 else ''
-            )
-        elif 'add' in super_message:
-            bot.invite_user_to_chat(
-                message=message,
-                user_chat_id=super_message[0],
-                chat_id=super_message[1]
-            )
+    superuser_actions(message)
 
-    bot.is_superuser = True if is_super_user(message.from_user.id) else False
+    bot.is_superuser = message.from_user.id in superusers
+
+
+@superuser_only
+def superuser_actions(message):
+    super_message = message.text.split(' ')
+
+    if any([True for x in super_actions[0] if x in super_message]):
+        bot.kick_member(
+            message,super_message[0],super_message[1],
+            reason=super_message[3:] if len(super_message) > 3 else ''
+        )
+    elif any([True for x in super_actions[1] if x in super_message]):
+        bot.invite_user_to_chat(message, super_message[0], super_message[1])
+    elif any([True for x in super_actions[2] if x in super_message]):
+        bot.clear_user_data(message.from_user.id)
 
 
 def member(chat_id, user_id):

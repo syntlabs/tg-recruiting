@@ -9,6 +9,7 @@ from os.path import exists
 from inspect import stack
 
 from info_text import major
+from main import super_actions
 
 RESIZE_KEYBOARD_MARK_UP = True
 ADMITION_QUEUE_PATH = ''
@@ -47,6 +48,7 @@ class SynthesisLabsBot(TeleBot):
         self.id_pointer = None
         self.waiting_for_admition = False
         self.is_superuser = False
+        self.__users_container = ADMITION_QUEUE_PATH
 
     @classmethod
     def invite_user_to_chat(
@@ -81,10 +83,22 @@ class SynthesisLabsBot(TeleBot):
                 )
 
     @classmethod
+    def clear_user_data(cls, user_id: int):
+
+        with open(cls.__users_container, 'w') as file:
+            for line in file.readlines():
+                if line.__contains__(str(user_id)):
+                    del line
+
+    @classmethod
     def add_to_admition(cls, user_id: int, bulk_data: tuple) -> None:
 
         if exists(ADMITION_QUEUE_PATH) and not cls.waiting_for_admition:
+
+            cls.__users_container = ADMITION_QUEUE_PATH
+
             with open(ADMITION_QUEUE_PATH, 'w') as file:
+
                 file.write(
                     str(
                         *bulk_data
@@ -92,7 +106,11 @@ class SynthesisLabsBot(TeleBot):
                 )
                 file.close()
         else:
-            with open(f'User {user_id}: admition.txt', 'w') as file:
+            new_path = f'User {user_id}: admition.txt'
+            cls.__users_container = new_path
+
+            with open(new_path, 'w') as file:
+
                 file.write(
                     str(
                         *bulk_data
@@ -109,12 +127,8 @@ class SynthesisLabsBot(TeleBot):
         all_form_conditions_met = all([
             isinstance(scalp_message[0], int),
             isinstance(scalp_message[1], int),
-            scalp_message[2].__contains__(
-                'kick'
-            ) or scalp_message.__contains__(
-                'add'
-            ),
-            isinstance(scalp_message[3:], list)])
+            isinstance(scalp_message[3:], list),
+            any(map(lambda x: x in scalp_message, super_actions))])
 
         if len(scalp_message) and all_form_conditions_met:
             return True
@@ -129,7 +143,7 @@ class SynthesisLabsBot(TeleBot):
             for key, value in items:
                 buttons.append(
                     InlineKeyboardButton(
-                        text=key if enum != 4 else 'stop',
+                        text=key if enum != 3 else 'stop',
                         callback_data=value[-1]
                     )
                 )
