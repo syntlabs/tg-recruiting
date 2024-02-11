@@ -2,10 +2,13 @@ from telebot import ExceptionHandler, TeleBot
 from telebot.handler_backends import HandlerBackend
 from telebot.storage import StateMemoryStorage, StateStorageBase
 from telebot.types import InlineKeyboardButton, ReplyKeyboardMarkup
+from pandas import read_csv
+from os.path import exists
 
 from info_text import major
 
 RESIZE_KEYBOARD_MARK_UP = True
+ADMITION_QUEUE_PATH = ''
 
 
 class SynthesisLabsBot(TeleBot):
@@ -39,6 +42,28 @@ class SynthesisLabsBot(TeleBot):
         self.buttons = self.create_buttons()
         self.keyboard_buttons = self.create_keyboard_buttons()
         self.id_pointer = None
+        self.waiting_for_admition = False
+
+    @classmethod
+    def add_to_admition(cls, user_id: int, bulk_data: tuple) -> None:
+
+        if exists(ADMITION_QUEUE_PATH) and not cls.waiting_for_admition:
+            with open(ADMITION_QUEUE_PATH, 'w') as adm_file:
+                adm_file.write(
+                    str(
+                        *bulk_data
+                    )
+                )
+                adm_file.close()
+        else:
+            with open(f'User {user_id}: admition', 'w') as new_admition:
+                new_admition.write(
+                    str(
+                        *bulk_data
+                    )
+                )
+
+        cls.waiting_for_admition = True
 
     def create_buttons(self):
 
