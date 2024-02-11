@@ -20,7 +20,6 @@ GROUP_CHAT_ID = environ.get('GROUP_CHAT_ID')
 MAIN_CHAT_ID = environ.get('MAIN_CHAT_ID')
 
 enroll_in_process = False
-user_on_admition_queue = False
 
 superusers = (900659397, 5116022329,)
 
@@ -60,11 +59,6 @@ def send_data_to_admin(message: list, data: list, hasher: str) -> None:
 
     bot.add_to_admition(message.from_user.id, bulk)
 
-    if not hasattr(bot, 'waiting_for_admition'):
-        setattr(
-            bot, 'waiting_for_admition', True
-        )
-
 
 def catch_data(messages: list) -> list:
     return [x for x in messages]
@@ -96,11 +90,6 @@ def handle_text(message: list) -> None:
     current_chat = message.chat.id
 
     if not member(GROUP_CHAT_ID, message.from_user.id):
-<<<<<<< HEAD
-=======
-        bot.send_message(current_chat, major['enroll'][2])
-
->>>>>>> 5d2201e7a7dc4a3ab8ee1e9688b1c651ba39d3f8
         if message.text == major['enroll'][0]:
             if bot.waiting_for_admition:
                 bot.send_message(current_chat, text=major['enroll'][-2])
