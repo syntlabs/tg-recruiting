@@ -108,14 +108,14 @@ class SynthesisLabsBot(TeleBot):
 
         buttons = []
 
-        for enum, key, value in enumerate(major.items()):
-
-            buttons.append(
-                InlineKeyboardButton(
-                    text=key if enum != 4 else 'stop',
-                    callback_data=value[-1]
+        for enum, items in enumerate(major.items()):
+            for key, value in items:
+                buttons.append(
+                    InlineKeyboardButton(
+                        text=key if enum != 4 else 'stop',
+                        callback_data=value[-1]
+                    )
                 )
-            )
 
         return buttons
 
