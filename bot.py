@@ -1,9 +1,10 @@
+
+from typing import Optional
 from telebot import ExceptionHandler, TeleBot
 from telebot.handler_backends import HandlerBackend
 from telebot.apihelper import ApiTelegramException
 from telebot.storage import StateMemoryStorage, StateStorageBase
 from telebot.types import InlineKeyboardButton, ReplyKeyboardMarkup, Message
-from pandas import read_csv
 from os.path import exists
 from inspect import stack
 
@@ -48,11 +49,23 @@ class SynthesisLabsBot(TeleBot):
         self.is_superuser = False
 
     @classmethod
+    def invite_user_to_chat(
+        cls, message: Message, user_chat_id: int, chat_id: int
+    ) -> None:
+
+        if cls.is_superuser and cls.valid_super_form(message):
+            cls.send_message(
+                chat_id=user_chat_id, text=cls.create_chat_invite_link(
+                    chat_id=chat_id
+                )
+            )
+
+    @classmethod
     def kick_member(
         cls, message: Message, user_id: int, chat_id: int, reason: str = ''
     ) -> None:
 
-        if cls.is_superuser and cls.valid_kick_form(message):
+        if cls.is_superuser and cls.valid_super_form(message):
             try:
                 cls.ban_chat_member(chat_id=chat_id, user_id=user_id)
             except ApiTelegramException:
@@ -89,14 +102,18 @@ class SynthesisLabsBot(TeleBot):
 
         cls.waiting_for_admition = True
 
-    def valid_kick_form(message: Message) -> bool:
+    def valid_super_form(message: Message) -> bool:
 
         scalp_message = message.text.split(' ')
 
         all_form_conditions_met = all([
             isinstance(scalp_message[0], int),
             isinstance(scalp_message[1], int),
-            scalp_message[2].__contains__('kick'),
+            scalp_message[2].__contains__(
+                'kick'
+            ) or scalp_message.__contains__(
+                'add'
+            ),
             isinstance(scalp_message[3:], list)])
 
         if len(scalp_message) and all_form_conditions_met:
