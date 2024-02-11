@@ -119,8 +119,19 @@ def handle_text(message: Message) -> None:
 
     if is_super_user(message.from_user.id):
         super_message = message.text.split(' ')
-        if super_message == 2:
-            bot.send_message(super_message[0], text=super_message[1])
+        if 'kick' in super_message:
+            bot.kick_member(
+                message=message,
+                user_id=super_message[0],
+                chat_id=super_message[1],
+                reason=super_message[3:] if len(super_message) > 3 else ''
+            )
+        elif 'add' in super_message:
+            bot.invite_user_to_chat(
+                message=message,
+                user_chat_id=super_message[0],
+                chat_id=super_message[1]
+            )
 
     bot.is_superuser = True if is_super_user(message.from_user.id) else False
 
