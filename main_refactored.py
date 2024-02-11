@@ -3,6 +3,7 @@ from telebot.apihelper import ApiTelegramException
 from hashlib import sha3_512
 from os import environ, getenv
 from http import HTTPStatus
+from telebot.types import Message
 
 from info_text import major
 from bot import SynthesisLabsBot
@@ -10,7 +11,7 @@ from bot import SynthesisLabsBot
 environ['TOKEN'] = 'token'
 environ['TEST_TOKEN'] = 'test_token'
 environ['TEST_CHAT_ID'] = 'test_chat_id'
-environ['GROUP_CHAT_ID'] = 'group_chat_id'
+environ['GROUP_CHAT_ID'] = '0000000'
 environ['MAIN_CHAT_ID'] = 'main_chat_id'
 
 TOKEN = getenv('TOKEN')
@@ -47,7 +48,7 @@ def enroll_stopped(message) -> None:
     )
 
 
-def send_data_to_admin(message: list, data: list, hasher: str) -> None:
+def send_data_to_admin(message: Message, data: list, hasher: str) -> None:
 
     bulk = (
         ('chat_id', message.chat.id),
@@ -67,7 +68,7 @@ def catch_data(messages: list) -> list:
 def super_hasher(data: list) -> str:
     return '{hp}{sha}'.format(
         hp=major['hash_prefix'],
-        sha=sha3_512(data.encode('utf-8')).hexdigest()
+        sha=sha3_512(str(data).encode('utf-8')).hexdigest()
     )
 
 
@@ -85,7 +86,7 @@ def clean_denied_user_data(user_id: int) -> None:
 
 
 @bot.message_handler(content_types=['text'])
-def handle_text(message: list) -> None:
+def handle_text(message: Message) -> None:
 
     current_chat = message.chat.id
 
@@ -110,16 +111,19 @@ def handle_text(message: list) -> None:
         elif msg_diff == id_slice:
 
             data = catch_data(messages=message[-id_slice:])
-            hasher = super_hasher(major)
+            hasher = super_hasher(data)
 
             send_data_to_admin(message, data, hasher)
 
         bot.send_message(current_chat, text=major['qustons'][msg_diff])
-    
+
     if is_super_user(message.from_user.id):
+        super_message = message.text.split(' ')
+        if super_message == 2:
+            bot.send_message(super_message[0], text=super_message[1])
 
 
-def member(chat_id: int, user_id: int) -> None:
+def member(chat_id, user_id):
     try:
         bot.get_chat_member(chat_id, user_id)
         bot.send_message(chat_id, 'Вы уже наняты')
