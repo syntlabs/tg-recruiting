@@ -122,6 +122,8 @@ def handle_text(message: Message) -> None:
         if super_message == 2:
             bot.send_message(super_message[0], text=super_message[1])
 
+    bot.is_superuser = True if is_super_user(message.from_user.id) else False
+
 
 def member(chat_id, user_id):
     try:

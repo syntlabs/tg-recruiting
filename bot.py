@@ -1,9 +1,11 @@
 from telebot import ExceptionHandler, TeleBot
 from telebot.handler_backends import HandlerBackend
+from telebot.apihelper import ApiTelegramException
 from telebot.storage import StateMemoryStorage, StateStorageBase
-from telebot.types import InlineKeyboardButton, ReplyKeyboardMarkup
+from telebot.types import InlineKeyboardButton, ReplyKeyboardMarkup, Message
 from pandas import read_csv
 from os.path import exists
+from inspect import currentframe
 
 from info_text import major
 
@@ -43,29 +45,67 @@ class SynthesisLabsBot(TeleBot):
         self.keyboard_buttons = self.create_keyboard_buttons()
         self.id_pointer = None
         self.waiting_for_admition = False
+        self.is_superuser = False
+
+    @classmethod
+    def kick_member(
+        cls, message: Message, user_id: int, chat_id: int, reason: str = ''
+    ) -> None:
+
+        if cls.is_superuser and cls.valid_kick_form(message):
+            try:
+                cls.ban_chat_member(chat_id=chat_id, user_id=user_id)
+            except ApiTelegramException:
+                cls.send_message(
+                    chat_id=message.from_user.id,
+                    text=f'Возникла ошибка при попытке вызвать метод\
+                        {currentframe}.'
+                )
+            else:
+                cls.send_message(
+                    chat_id=user_id, text=f'Вы были удалены из чата \
+                    {chat_id} причина {reason}'
+                )
 
     @classmethod
     def add_to_admition(cls, user_id: int, bulk_data: tuple) -> None:
 
         if exists(ADMITION_QUEUE_PATH) and not cls.waiting_for_admition:
-            with open(ADMITION_QUEUE_PATH, 'w') as adm_file:
-                adm_file.write(
+            with open(ADMITION_QUEUE_PATH, 'w') as file:
+                file.write(
                     str(
                         *bulk_data
                     )
                 )
-                adm_file.close()
+                file.close()
         else:
-            with open(f'User {user_id}: admition', 'w') as new_admition:
-                new_admition.write(
+            with open(f'User {user_id}: admition.txt', 'w') as file:
+                file.write(
                     str(
                         *bulk_data
                     )
                 )
+                file.close()
 
         cls.waiting_for_admition = True
 
-    def create_buttons(self):
+    def valid_kick_form(message: Message) -> bool:
+
+        scalp_message = message.text.split(' ')
+
+        all_form_conditions_met = all([
+            isinstance(scalp_message[0], int),
+            isinstance(scalp_message[1], int),
+            scalp_message[2].__contains__('kick'),
+            isinstance(scalp_message[3], str)
+        ])
+
+        if len(scalp_message) and all_form_conditions_met:
+            return True
+        else:
+            return False
+
+    def create_buttons(self) -> list:
 
         buttons = []
 
@@ -80,7 +120,7 @@ class SynthesisLabsBot(TeleBot):
 
         return buttons
 
-    def create_keyboard_buttons(self):
+    def create_keyboard_buttons(self) -> ReplyKeyboardMarkup:
 
         keyboard_buttons = ReplyKeyboardMarkup(
             resize_keyboard=RESIZE_KEYBOARD_MARK_UP
