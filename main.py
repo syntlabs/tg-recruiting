@@ -13,7 +13,7 @@ environ['token'] = 'path_env'
 environ['group_chat_id'] = 'path_env'
 
 TOKEN = getenv('token')
-GROUP_CHAT_ID = getenv('group_chat_id')
+MODERATION_CHAT_ID = -4183890919
 
 #TOKEN = '6757154104:AAEdS1aEHHTj7M3yINHCWYVDEquyypQmSJg'
 #GROUP_CHAT_ID = -1001674441819
@@ -39,6 +39,7 @@ def start(message, res=False):
     bot.send_message(
         message.chat.id, major['start'], reply_markup=bot.keyboard_buttons
     )
+    bot.is_superuser = message.from_user.id in SUPERUSERS
     bot.cities = read_html(CITIES_URL)[0]
 
 
@@ -70,14 +71,14 @@ def enroll_stopped(message) -> None:
 def send_data_to_admin(message: Message, data: list, hasher: str) -> None:
 
     bulk = (
-        ('chat_id', message.chat.id),
+        ('user_id', message.from_user.id),
         ('first_name', message.from_user.first_name),
         ('username', message.from_user.username),
         ('data', data),
         ('hash', hasher),
     )
 
-    bot.add_to_admition(message.from_user.id, bulk)
+    bot.add_to_admition(MODERATION_CHAT_ID, bulk)
 
 
 def catch_data(messages: list) -> list:
@@ -99,26 +100,6 @@ def clean_denied_user_data(user_id: int) -> None:
     )
 
 
-def valid_user_form(message: Message) -> bool:
-
-    _message = message.text.split(' ')
-
-    name_validation = len(_message) == 3
-    city_validation = _message in cities(bot.cities)
-    birth_validation = compile(
-        str(_message)
-    ).match(
-        BIRTH_VALIDATOR
-    ) is not None
-
-    if all([
-        name_validation, city_validation, birth_validation
-    ]):
-        return True
-    else:
-        return False
-
-
 @bot.message_handler(content_types=['text'])
 def handle_text(message: Message) -> None:
 
@@ -126,7 +107,7 @@ def handle_text(message: Message) -> None:
 
     current_chat = message.chat.id
 
-    if not member(GROUP_CHAT_ID, message.from_user.id):
+    if not member(MODERATION_CHAT_ID, message.from_user.id):
         if message.text == major['enroll'][0]:
             if bot.waiting_for_admition:
                 bot.send_message(current_chat, text=major['enroll'][-2])
@@ -158,25 +139,68 @@ def handle_text(message: Message) -> None:
         else:
             bot.send_message(current_chat, text='Неизвестная команда')
 
-        superuser_actions(message)
-        bot.is_superuser = message.from_user.id in SUPERUSERS
+
+@superuser_only
+@bot.message_handler(commands=[*SUPER_ACTIONS[0]])
+def handle_kicks(message):
+
+    super_message = message.text.split(' ')
+
+    if bot.is_superuser:
+        bot.kick_chat_member(
+            chat_id=super_message[1],
+            user_id=super_message[0],
+        )
+        if len(super_message) > 2:
+            bot.send_message(
+                chat_id=super_message[0],
+                text=f'Тебя кикнули из syntlabs. Причина: {
+                    super_message[2:]
+                }'
+            )
 
 
 @superuser_only
-def superuser_actions(message):
+@bot.message_handler(commands=[*SUPER_ACTIONS[1]])
+def handle_add(message):
+
     super_message = message.text.split(' ')
 
-    if any([True for x in SUPER_ACTIONS[0] if x in super_message]):
-        bot.kick_member(
-            message, super_message[0], super_message[1],
-            reason=super_message[3:] if len(super_message) > 3 else ''
+    if bot.is_superuser:
+        bot.send_message(
+            super_message[0],
+            text=bot.create_chat_invite_link(
+                super_message[1]
+            )
         )
-    elif any([True for x in SUPER_ACTIONS[1] if x in super_message]):
 
-        bot.invite_user_to_chat(message, super_message[0], super_message[1])
-    elif any([True for x in SUPER_ACTIONS[2] if x in super_message]):
 
-        bot.clear_user_data(message.text.split()[0])
+@superuser_only
+@bot.message_handler(commands=[*SUPER_ACTIONS[2]])
+def clear_data(message):
+
+    if bot.is_superuser:
+        bot.clear_user_data(message.text)
+
+
+def valid_user_form(message: Message) -> bool:
+
+    _message = message.text.split(' ')
+
+    name_validation = len(_message) == 3
+    city_validation = _message in cities(bot.cities)
+    birth_validation = compile(
+        str(_message)
+    ).match(
+        BIRTH_VALIDATOR
+    ) is not None
+
+    if all([
+        name_validation, city_validation, birth_validation
+    ]):
+        return True
+    else:
+        return False
 
 
 def member(chat_id, user_id):

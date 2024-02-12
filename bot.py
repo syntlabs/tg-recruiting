@@ -91,50 +91,14 @@ class SynthesisLabsBot(TeleBot):
                     del line
 
     @classmethod
-    def add_to_admition(cls, user_id: int, bulk_data: tuple) -> None:
+    def add_to_admition(cls, admition_chat_id: int, bulk: tuple) -> None:
 
-        if exists(ADMITION_QUEUE_PATH) and not cls.waiting_for_admition:
-
-            cls.__users_container = ADMITION_QUEUE_PATH
-
-            with open(ADMITION_QUEUE_PATH, 'w') as file:
-
-                file.write(
-                    str(
-                        *bulk_data
-                    )
-                )
-                file.close()
-        else:
-            new_path = f'User {user_id}: admition.txt'
-            cls.__users_container = new_path
-
-            with open(new_path, 'w') as file:
-
-                file.write(
-                    str(
-                        *bulk_data
-                    )
-                )
-                file.close()
-
-        cls.waiting_for_admition = True
-
-    @property
-    def valid_super_form(message: Message) -> bool:
-
-        scalp_message = message.text.split(' ')
-
-        all_form_conditions_met = all([
-            isinstance(scalp_message[0], int),
-            isinstance(scalp_message[1], int),
-            isinstance(scalp_message[3:], list),
-            any(map(lambda x: x in scalp_message, []))])
-
-        if len(scalp_message) and all_form_conditions_met:
-            return True
-        else:
-            return False
+        cls.send_message(
+            chat_id=admition_chat_id,
+            text=str(
+                *bulk
+            )
+        )
 
     def create_buttons(self) -> list:
 
