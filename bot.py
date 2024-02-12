@@ -48,6 +48,7 @@ class SynthesisLabsBot(TeleBot):
         self.waiting_for_admition = False
         self.is_superuser = False
         self.__users_container = ADMITION_QUEUE_PATH
+        self.cities = None
 
     @classmethod
     def invite_user_to_chat(
