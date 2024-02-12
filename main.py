@@ -13,7 +13,7 @@ environ['token'] = 'path_env'
 environ['group_chat_id'] = 'path_env'
 
 TOKEN = getenv('token')
-MODERATION_CHAT_ID = -4183890919
+MODERATION_CHAT_ID = -1001674441819
 
 #TOKEN = '6757154104:AAEdS1aEHHTj7M3yINHCWYVDEquyypQmSJg'
 #GROUP_CHAT_ID = -1001674441819
@@ -95,7 +95,7 @@ def super_hasher(data: list) -> str:
 def clean_denied_user_data(user_id: int) -> None:
 
     bot.send_message(
-        GROUP_CHAT_ID, text=f'{user_id} отказано  в членстве, \
+        MODERATION_CHAT_ID, text=f'{user_id} отказано  в членстве, \
                                         рекомендуется удалить данные.'
     )
 
@@ -114,6 +114,8 @@ def handle_text(message: Message) -> None:
             else:
                 enroll_in_process = True
                 bot.id_pointer = message[-1].message_id
+    else:
+        bot.send_message(current_chat, 'Вы уже участник')
 
     if enroll_in_process:
 
@@ -205,9 +207,11 @@ def valid_user_form(message: Message) -> bool:
 
 def member(chat_id, user_id):
     try:
-        bot.get_chat_member(chat_id, user_id)
-        bot.send_message(chat_id, 'Вы уже наняты')
-        return True
+        member = bot.get_chat_member(chat_id, user_id)
+        if member is not None:
+            return True
+        else:
+            return False
     except ApiTelegramException as error:
         if error.result_json['description'] == HTTPStatus.BAD_REQUEST:
             return False
