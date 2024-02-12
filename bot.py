@@ -9,7 +9,6 @@ from os.path import exists
 from inspect import stack
 
 from info_text import major
-from main import super_actions
 
 RESIZE_KEYBOARD_MARK_UP = True
 ADMITION_QUEUE_PATH = ''
@@ -120,6 +119,7 @@ class SynthesisLabsBot(TeleBot):
 
         cls.waiting_for_admition = True
 
+    @property
     def valid_super_form(message: Message) -> bool:
 
         scalp_message = message.text.split(' ')
@@ -128,7 +128,7 @@ class SynthesisLabsBot(TeleBot):
             isinstance(scalp_message[0], int),
             isinstance(scalp_message[1], int),
             isinstance(scalp_message[3:], list),
-            any(map(lambda x: x in scalp_message, super_actions))])
+            any(map(lambda x: x in scalp_message, []))])
 
         if len(scalp_message) and all_form_conditions_met:
             return True
@@ -139,14 +139,15 @@ class SynthesisLabsBot(TeleBot):
 
         buttons = []
 
-        for enum, items in enumerate(major.items()):
-            for key, value in items:
-                buttons.append(
-                    InlineKeyboardButton(
-                        text=key if enum != 3 else 'stop',
-                        callback_data=value[-1]
-                    )
+        for key, values in major.items():
+            buttons.append(
+                InlineKeyboardButton(
+                    text=key,
+                    callback_data=values[0]
                 )
+            )
+            if key == 'support':
+                break
 
         return buttons
 

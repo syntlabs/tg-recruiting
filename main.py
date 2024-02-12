@@ -7,17 +7,17 @@ from telebot.types import Message
 from info_text import major
 from bot import SynthesisLabsBot
 
-environ['TOKEN'] = 'token'
+environ['TOKEN'] = '6757154104:AAEdS1aEHHTj7M3yINHCWYVDEquyypQmSJg'
 environ['TEST_TOKEN'] = 'test_token'
 environ['TEST_CHAT_ID'] = 'test_chat_id'
 environ['GROUP_CHAT_ID'] = '0000000'
 environ['MAIN_CHAT_ID'] = 'main_chat_id'
 
-TOKEN = getenv('TOKEN')
-TEST_TOKEN = environ.get('TEST_TOKEN')
-TEST_CHAT_ID = environ.get('TEST_CHAT_ID')
-GROUP_CHAT_ID = environ.get('GROUP_CHAT_ID')
-MAIN_CHAT_ID = environ.get('MAIN_CHAT_ID')
+TOKEN = '6757154104:AAEdS1aEHHTj7M3yINHCWYVDEquyypQmSJg'
+#TEST_TOKEN = environ.get('TEST_TOKEN')
+#TEST_CHAT_ID = environ.get('TEST_CHAT_ID')
+GROUP_CHAT_ID = -1001674441819
+#MAIN_CHAT_ID = environ.get('MAIN_CHAT_ID')
 
 enroll_in_process = False
 
@@ -25,7 +25,7 @@ superusers = (900659397, 5116022329,)
 super_actions = (
         ('kick', 'ban'),
         ('add', 'invite'),
-        ('delete', 'clear', 'clean', 'remove')
+        ('delete', 'clear', 'clean', 'remove'),
     )
 
 bot = SynthesisLabsBot(token=str(TOKEN))
@@ -40,7 +40,7 @@ def start(message, res=False):
 
 def superuser_only(func):
     def super_wrapper(*args, **kwargs):
-        if bot.is_super_user:
+        if bot.is_superuser:
             return func(*args, **kwargs)
     return super_wrapper
 
@@ -66,7 +66,7 @@ def send_data_to_admin(message: Message, data: list, hasher: str) -> None:
         ('first_name', message.from_user.first_name),
         ('username', message.from_user.username),
         ('data', data),
-        ('hash', hasher)
+        ('hash', hasher),
     )
 
     bot.add_to_admition(message.from_user.id, bulk)
@@ -86,7 +86,7 @@ def super_hasher(data: list) -> str:
 def clean_denied_user_data(user_id: int) -> None:
 
     bot.send_message(
-        TEST_CHAT_ID, text=f'{user_id} отказано  в членстве, \
+        GROUP_CHAT_ID, text=f'{user_id} отказано  в членстве, \
                                         рекомендуется удалить данные.'
     )
 
@@ -94,7 +94,11 @@ def clean_denied_user_data(user_id: int) -> None:
 @bot.message_handler(content_types=['text'])
 def handle_text(message: Message) -> None:
 
+    global enroll_in_process
+
     current_chat = message.chat.id
+
+    bot.send_message(message.chat.id, text=major[message.text][1])
 
     if not member(GROUP_CHAT_ID, message.from_user.id):
         if message.text == major['enroll'][0]:
@@ -134,13 +138,15 @@ def superuser_actions(message):
 
     if any([True for x in super_actions[0] if x in super_message]):
         bot.kick_member(
-            message,super_message[0],super_message[1],
+            message, super_message[0], super_message[1],
             reason=super_message[3:] if len(super_message) > 3 else ''
         )
     elif any([True for x in super_actions[1] if x in super_message]):
+
         bot.invite_user_to_chat(message, super_message[0], super_message[1])
     elif any([True for x in super_actions[2] if x in super_message]):
-        bot.clear_user_data(message.from_user.id)
+
+        bot.clear_user_data(message.text.split()[0])
 
 
 def member(chat_id, user_id):
