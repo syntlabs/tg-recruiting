@@ -44,11 +44,9 @@ class SynthesisLabsBot(TeleBot):
         )
         self.buttons = self.create_buttons()
         self.keyboard_buttons = self.create_keyboard_buttons()
-        self.id_pointer = None
         self.waiting_for_admition = False
         self.is_superuser = False
         self.__users_container = ADMITION_QUEUE_PATH
-        self.cities = None
 
     @classmethod
     def invite_user_to_chat(
@@ -83,7 +81,7 @@ class SynthesisLabsBot(TeleBot):
                 )
 
     @classmethod
-    def clear_user_data(cls, user_id: int):
+    def clear_user_data(cls, user_id: int) -> None:
 
         with open(cls.__users_container, 'w') as file:
             for line in file.readlines():
@@ -105,22 +103,6 @@ class SynthesisLabsBot(TeleBot):
             file.close()
 
         cls.waiting_for_admition = True
-
-    @property
-    def valid_super_form(message: Message) -> bool:
-
-        scalp_message = message.text.split(' ')
-
-        all_form_conditions_met = all([
-            isinstance(scalp_message[0], int),
-            isinstance(scalp_message[1], int),
-            isinstance(scalp_message[3:], list),
-            any(map(lambda x: x in scalp_message, []))])
-
-        if len(scalp_message) and all_form_conditions_met:
-            return True
-        else:
-            return False
 
     def create_buttons(self) -> list:
 
