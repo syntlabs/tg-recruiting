@@ -95,7 +95,7 @@ class SynthesisLabsBot(TeleBot):
 
         new_path = f'{user_id}_admition.txt'
         cls.__users_container = new_path
-        
+
         with open(new_path, 'w') as file:
             file.write(
                 str(

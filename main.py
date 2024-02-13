@@ -138,6 +138,11 @@ def process_enrollment(message):
         )
         bot.waiting_for_admition = True
         enroll_in_process = False
+
+        data = catch_data(message)
+        hasher = super_hasher(data)
+
+        send_data_to_admin(message, data, hasher)
     else:
         bot.send_message(message.chat.id, text=qustons_copy['qustons'][0])
         del qustons_copy['qustons'][0]
