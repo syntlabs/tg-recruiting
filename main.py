@@ -9,9 +9,6 @@ from re import findall
 from info_text import major
 from bot import SynthesisLabsBot
 
-#environ['token'] = 'path_env'
-#environ['group_chat_id'] = 'path_env'
-#environ['cities_list'] = 'path_ro_cities'
 
 cities_list = (
     'Москва',
@@ -22,7 +19,15 @@ cities_list = (
 )
 
 MODERATION_CHAT_ID = -1001674441819
-PUBLIC_CHAT = -1001853428617
+PUBLIC_CHAT_ID = -1001853428617
+
+#environ['token'] = 'path_env'
+#environ['group_chat_id'] = 'path_env'
+#environ['cities_list'] = 'path_ro_cities'
+
+#TOKEN = getenv('token')
+#MODERATION_CHAT_ID = getenv('moderation_chat_id')
+#PUBLIC_CHAT_ID = getenv('public_chat_id')
 
 TOKEN = '6757154104:AAEdS1aEHHTj7M3yINHCWYVDEquyypQmSJg'
 
@@ -211,7 +216,7 @@ def valid_step(message: Message) -> bool:
 
 def member(user_id):
     try:
-        member = bot.get_chat_member(PUBLIC_CHAT, user_id)
+        member = bot.get_chat_member(PUBLIC_CHAT_ID, user_id)
         if member is not None:
             return True
         else:
