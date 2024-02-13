@@ -4,23 +4,27 @@ from os import environ, getenv
 from http import HTTPStatus
 from telebot.types import Message
 from pandas import read_html
-from re import compile
+from re import findall
 
 from info_text import major
 from bot import SynthesisLabsBot
 
-environ['token'] = 'path_env'
-environ['group_chat_id'] = 'path_env'
+#environ['token'] = 'path_env'
+#environ['group_chat_id'] = 'path_env'
+#environ['cities_list'] = 'path_ro_cities'
 
-TOKEN = getenv('token')
+cities_list = (
+    'Москва',
+    'Рязань',
+    'Петушки',
+    'Фашингтон',
+    'село Париж, московская область',
+)
+
 MODERATION_CHAT_ID = -1001674441819
+PUBLIC_CHAT = -1001853428617
 
-#TOKEN = '6757154104:AAEdS1aEHHTj7M3yINHCWYVDEquyypQmSJg'
-#GROUP_CHAT_ID = -1001674441819
-
-CITIES_URL = ('https://ru.wikipedia.org/wiki/%D0%A1%D0%BF%')
-('D0%B8%D1%81%D0%BE%D0%BA_%D0%B3%D0%BE%D1%80%D0%BE%D0%B4%D0%BE%')
-('D0%B2_%D0%A0%D0%BE%D1%81%D1%81%D0%B8%D0%B8')
+TOKEN = '6757154104:AAEdS1aEHHTj7M3yINHCWYVDEquyypQmSJg'
 
 BIRTH_VALIDATOR = '11.11.1111'
 SUPERUSERS = (900659397, 5116022329, 503523768, )
@@ -30,8 +34,12 @@ SUPER_ACTIONS = (
         ('delete', 'clear', 'clean', 'remove'),
     )
 
+shift = -1
+
 enroll_in_process = False
 bot = SynthesisLabsBot(token=str(TOKEN))
+qustons_copy = dict()
+qustons_copy['qustons'] = list(major['qustons'])
 
 
 @bot.message_handler(commands=['start'])
@@ -39,8 +47,6 @@ def start(message, res=False):
     bot.send_message(
         message.chat.id, major['start'], reply_markup=bot.keyboard_buttons
     )
-    bot.is_superuser = message.from_user.id in SUPERUSERS
-    bot.cities = read_html(CITIES_URL)[0]
 
 
 def superuser_only(func):
@@ -48,10 +54,6 @@ def superuser_only(func):
         if bot.is_superuser:
             return func(*args, **kwargs)
     return super_wrapper
-
-
-def cities(cities):
-    yield cities
 
 
 def any_button_pressed(message) -> bool:
@@ -106,40 +108,39 @@ def handle_text(message: Message) -> None:
     global enroll_in_process
 
     current_chat = message.chat.id
+    current_user = message.from_user.id
+    msg = message.text
+    bot.is_superuser = message.from_user.id in SUPERUSERS
 
-    if not member(MODERATION_CHAT_ID, message.from_user.id):
-        if message.text == major['enroll'][0]:
-            if bot.waiting_for_admition:
-                bot.send_message(current_chat, text=major['enroll'][-2])
-            else:
+    if not member(current_user):
+
+        if not enroll_in_process:
+            if msg == 'Вступить' and not bot.waiting_for_admition:
+                bot.send_message(current_chat, text=major['Вступить'][1])
                 enroll_in_process = True
-                bot.id_pointer = message[-1].message_id
-    else:
-        bot.send_message(current_chat, 'Вы уже участник')
-
-    if enroll_in_process:
-
-        msg_diff = message[-1].message_id - bot.id_pointer
-
-        qustons_count = len(major['qustons'])
-
-        if any_button_pressed(message):
-
-            enroll_stopped(message)
-            enroll_in_process = False
-        elif msg_diff == qustons_count:
-
-            data = catch_data(messages=message[-qustons_count:])
-            hasher = super_hasher(data)
-
-            send_data_to_admin(message, data, hasher)
-
-        bot.send_message(current_chat, text=major['qustons'][msg_diff])
-    else:
-        if any(map(lambda x: message.text == x.text, bot.buttons)):
-            bot.send_message(current_chat, text=major[message.text][1])
+            elif msg == 'Вступить' and bot.waiting_for_admition:
+                bot.send_message(current_chat, text=major['Вступить'][2])
+            elif any([True for x in major.keys() if x == msg]):
+                bot.send_message(current_chat, major[msg][1])
+            else:
+                bot.send_message(current_chat, text='Неизвестная команда')
         else:
-            bot.send_message(current_chat, text='Неизвестная команда')
+            process_enrollment(message)
+
+
+def process_enrollment(message):
+
+    global enroll_in_process
+
+    if len(qustons_copy['qustons']) == 0:
+        bot.send_message(
+            message.chat.id, text='Заявка заполнена, ожидайте ответ'
+        )
+        bot.waiting_for_admition = True
+        enroll_in_process = False
+    else:
+        bot.send_message(message.chat.id, text=qustons_copy['qustons'][0])
+        del qustons_copy['qustons'][0]
 
 
 @superuser_only
@@ -185,29 +186,27 @@ def clear_data(message):
         bot.clear_user_data(message.text)
 
 
-def valid_user_form(message: Message) -> bool:
+def valid_step(message: Message) -> bool:
 
-    _message = message.text.split(' ')
+    scalp_message = message.text.split('')
 
-    name_validation = len(_message) == 3
-    city_validation = _message in cities(bot.cities)
-    birth_validation = compile(
-        str(_message)
-    ).match(
-        BIRTH_VALIDATOR
-    ) is not None
+    name_valid = len(scalp_message) == 3
+    birth_valid = findall(BIRTH_VALIDATOR, message.text)
+    city_valid = message.text.lower() in cities_list
 
-    if all([
-        name_validation, city_validation, birth_validation
-    ]):
+    if message[-1].text.lower() == 'фио' and name_valid:
+        return True
+    elif message[-1].text.lower() == 'дата рождения' and birth_valid:
+        return True
+    elif message[-1].text.lower() == 'город' and city_valid:
         return True
     else:
         return False
 
 
-def member(chat_id, user_id):
+def member(user_id):
     try:
-        member = bot.get_chat_member(chat_id, user_id)
+        member = bot.get_chat_member(PUBLIC_CHAT, user_id)
         if member is not None:
             return True
         else:
