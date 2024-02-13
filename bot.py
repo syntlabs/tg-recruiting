@@ -99,7 +99,7 @@ class SynthesisLabsBot(TeleBot):
         with open(new_path, 'w') as file:
             file.write(
                 str(
-                    *bulk_data
+                    bulk_data
                 )
             )
             file.close()
