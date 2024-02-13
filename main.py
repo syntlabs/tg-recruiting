@@ -85,7 +85,7 @@ def send_data_to_admin(message: Message, data: list, hasher: str) -> None:
         ('hash', hasher),
     )
 
-    bot.add_to_admition(MODERATION_CHAT_ID, bulk)
+    bot.add_to_admition(message.from_user.id, bulk)
 
 
 def catch_data(messages: list) -> list:
@@ -216,11 +216,8 @@ def valid_step(message: Message) -> bool:
 
 def member(user_id):
     try:
-        member = bot.get_chat_member(PUBLIC_CHAT_ID, user_id)
-        if member is not None:
-            return True
-        else:
-            return False
+        bot.get_chat_member(PUBLIC_CHAT_ID, user_id)
+        return True
     except ApiTelegramException as error:
         if error.result_json['description'] == HTTPStatus.BAD_REQUEST:
             return False
