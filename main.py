@@ -45,6 +45,7 @@ enroll_in_process = False
 bot = SynthesisLabsBot(token=str(TOKEN))
 qustons_copy = dict()
 qustons_copy['qustons'] = list(major['qustons'])
+data_container = {}
 
 
 @bot.message_handler(commands=['start'])
@@ -75,7 +76,7 @@ def enroll_stopped(message) -> None:
     )
 
 
-def send_data_to_admin(message: Message, data: list, hasher: str) -> None:
+def send_data_to_admin(message: Message, data: dict, hasher: str) -> None:
 
     bulk = (
         ('user_id', message.from_user.id),
@@ -88,11 +89,11 @@ def send_data_to_admin(message: Message, data: list, hasher: str) -> None:
     bot.add_to_admition(message.from_user.id, bulk)
 
 
-def catch_data(messages: list) -> list:
-    return [x for x in messages]
+def catch_data(data: dict) -> dict:
+    return data
 
 
-def super_hasher(data: list) -> str:
+def super_hasher(data: dict) -> str:
     return '{hp}{sha}'.format(
         hp=major['hash_prefix'],
         sha=sha3_512(str(data).encode('utf-8')).hexdigest()
@@ -144,12 +145,17 @@ def process_enrollment(message):
         bot.waiting_for_admition = True
         enroll_in_process = False
 
-        data = catch_data(message)
+        data = catch_data(data_container)
         hasher = super_hasher(data)
 
         send_data_to_admin(message, data, hasher)
     else:
-        bot.send_message(message.chat.id, text=qustons_copy['qustons'][0])
+        pointer = qustons_copy['qustons'][0]
+
+        data_container[pointer] = message.text
+        
+        bot.send_message(message.chat.id, text=pointer)
+        
         del qustons_copy['qustons'][0]
 
 
