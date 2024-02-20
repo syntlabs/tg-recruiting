@@ -91,13 +91,13 @@ def add_to_waiting_queue(bulk_data: tuple) -> None:
             )
             new_file.close()
 
-    with open('waiting_queue.txt', 'w') as main_queue:
-        main_queue.writelines(
-            str(
-                bulk_data
+        with open('waiting_queue.txt', 'w') as main_queue:
+            main_queue.writelines(
+                str(
+                    bulk_data
+                )
             )
-        )
-        main_queue.close()
+            main_queue.close()
 
 
 def process_enrollment(update: Update, context: CallbackContext):
