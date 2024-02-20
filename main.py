@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from telegram.ext import (
     Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 )
-from telegram import Bot, ReplyKeyboardMarkup, Update
+from telegram import Bot, ReplyKeyboardMarkup, Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.error import TelegramError
 from datetime import datetime
 from info_text import major
@@ -80,17 +80,23 @@ def superuser(user_id: int) -> bool:
 
 def add_to_waiting_queue(bulk_data: tuple) -> None:
 
-    new_admition = f'{bulk_data[0]}_apply_queue.txt'
+    new_admition = f'{bulk_data[0][1]}_apply_queue.txt'
 
     if not exists(new_admition):
         with open(new_admition, 'w') as new_file:
             new_file.writelines(
-                bulk_data
+                str(
+                    bulk_data
+                )
             )
             new_file.close()
 
     with open('waiting_queue.txt', 'w') as main_queue:
-        main_queue.writelines(bulk_data)
+        main_queue.writelines(
+            str(
+                bulk_data
+            )
+        )
         main_queue.close()
 
 
@@ -100,11 +106,11 @@ def process_enrollment(update: Update, context: CallbackContext):
 
     if len(qustons_copy['qustons']) == 0:
 
-        context.waiting_for_admition = True
+        waiting_for_admition = True
         enroll_in_process = False
 
-        context.send_message(
-            message.chat.id, text='Заявка заполнена, ожидайте ответ'
+        context.bot.send_message(
+            update.message.chat.id, text='Заявка заполнена, ожидайте ответ'
         )
 
         add_to_waiting_queue(
@@ -119,9 +125,9 @@ def process_enrollment(update: Update, context: CallbackContext):
         )
     else:
         pointer = qustons_copy['qustons'][0]
-        data_container[pointer] = message.text.encode(ENCODING)
+        data_container[pointer] = update.message.text.encode(ENCODING)
 
-        bot.send_message(message.chat.id, text=pointer)
+        context.bot.send_message(update.message.chat.id, text=pointer)
 
         del qustons_copy['qustons'][0]
 
@@ -139,11 +145,11 @@ def handle_text(update: Update, context: CallbackContext) -> None:
 
         if not enroll_in_process:
 
-            if msg == 'Вступить' and not bot.waiting_for_admition:
+            if msg == 'Вступить' and not waiting_for_admition:
                 bot.send_message(current_chat.id, text=major['Вступить'][1])
                 enroll_in_process = True
 
-            elif msg == 'Вступить' and bot.waiting_for_admition:
+            elif msg == 'Вступить' and waiting_for_admition:
                 bot.send_message(current_chat.id, text=major['Вступить'][2])
 
             elif any_button_pressed(update.message.text):
@@ -152,7 +158,7 @@ def handle_text(update: Update, context: CallbackContext) -> None:
             else:
                 bot.send_message(current_chat.id, text='Неизвестная команда')
         else:
-            process_enrollment(update)
+            process_enrollment(update, context)
 
 
 def ban_member(user_id: int) -> None:
@@ -213,6 +219,7 @@ def main():
     bot = Bot(token=TOKEN)
 
     updater = Updater(token=TOKEN)
+    updater.dispatcher.add_handler(CommandHandler('start', start))
     updater.dispatcher.add_handler(
         CommandHandler(SUPER_COMMANDS, handle_commands)
     )
