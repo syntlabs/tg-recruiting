@@ -152,7 +152,7 @@ def handle_text(update: Update, context: CallbackContext) -> None:
             elif msg == 'Вступить' and waiting_for_admition:
                 bot.send_message(current_chat.id, text=major['Вступить'][2])
 
-            elif any_button_pressed(update.message.text):
+            elif any([x == update.message.text for x in major.keys()]):
                 bot.send_message(current_chat.id, major[msg][1])
 
             else:
