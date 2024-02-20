@@ -1,35 +1,34 @@
-from telebot.apihelper import ApiTelegramException
-from hashlib import sha3_512
-from os import environ, getenv
-from http import HTTPStatus
-from telebot.types import Message
-
+from os import getenv
+from os.path import exists
+from dotenv import load_dotenv
+from telegram.ext import (
+    Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+)
+from telegram import Bot, ReplyKeyboardMarkup, Update
+from telegram.error import TelegramError
+from datetime import datetime
 from info_text import major
-from bot import SynthesisLabsBot
+from hashlib import sha3_512
+from random import choice
+from string import ascii_lowercase, ascii_uppercase, digits
 
-#environ['token'] = 'path_env'
-#environ['group_chat_id'] = 'path_env'
-#environ['cities_list'] = 'path_ro_cities'
+load_dotenv()
 
-#TOKEN = getenv('token')
-#MODERATION_CHAT_ID = getenv('moderation_chat_id')
-#PUBLIC_CHAT_ID = getenv('public_chat_id')
+TOKEN = getenv('token')
+MODERATION_CHAT_ID = getenv('moderation_chat_id')
+PUBLIC_CHAT_ID = getenv('public_chat_id')
+MEMBERS = getenv('members')
 
-MODERATION_CHAT_ID = -1001674441819
-PUBLIC_CHAT_ID = -1001853428617
+SUPERUSERS = tuple(str(getenv('super_users')))
+SUPER_COMMANDS = ['kick', 'add', 'delete']
 
-TOKEN = '6757154104:AAEdS1aEHHTj7M3yINHCWYVDEquyypQmSJg'
+ENCODING = 'utf-8'
 
-SUPERUSERS = (900659397, 5116022329, 503523768, )
-SUPER_ACTIONS = (
-        ('kick', 'ban'),
-        ('add', 'invite'),
-        ('delete', 'clear', 'clean', 'remove'),
-    )
+UPDATER_INTERVAL = 3600
+SALT_SIZE = 16
 
 enroll_in_process = False
-
-bot = SynthesisLabsBot(token=str(TOKEN))
+waiting_for_admition = False
 
 qustons_copy = dict()
 data_container = dict()
@@ -37,147 +36,191 @@ data_container = dict()
 qustons_copy['qustons'] = list(major['qustons'])
 
 
-def any_button_pressed(message: Message) -> bool:
+def any_button_pressed(message: str) -> bool:
     return any(
         list(
             map(
-                lambda x: x[0] == message.text,
+                lambda x: x[0] == message,
                 major.keys()
             )
         )
     )
 
 
-def enroll_stopped(message: Message) -> None:
-    bot.send_message(
-        message.from_user.id, 'Заполнение анкеты приостановлено. \
-                                Вы сможете продолжить позднее.'
+def salt() -> str:
+    return ''.join(
+        choice(
+            ascii_lowercase + ascii_uppercase + digits
+        ) for _ in range(SALT_SIZE)
     )
 
 
-def super_hasher(data: dict) -> str:
+def hasher(data: dict) -> str:
     return '{hp}{sha}'.format(
         hp=major['hash_prefix'],
-        sha=sha3_512(
-            str(
-                data
-            ).encode('utf-8')
-        ).hexdigest()
+        sha=sha3_512(f'{data}{salt()}'.encode('utf-8')).hexdigest()
     )
 
 
 def member(user_id: int) -> bool:
     try:
         bot.get_chat_member(PUBLIC_CHAT_ID, user_id)
-    except ApiTelegramException as error:
-        if error.result_json['description'] == HTTPStatus.BAD_REQUEST:
-            return False
+    except TelegramError:
+        return False
     else:
         return True
     finally:
         return False
 
 
-def process_enrollment(message: Message):
+def superuser(user_id: int) -> bool:
+
+    return True if user_id in SUPERUSERS else False
+
+
+def add_to_waiting_queue(bulk_data: tuple) -> None:
+
+    new_admition = f'{bulk_data[0]}_apply_queue.txt'
+
+    if not exists(new_admition):
+        with open(new_admition, 'w') as new_file:
+            new_file.writelines(
+                bulk_data
+            )
+            new_file.close()
+
+    with open('waiting_queue.txt', 'w') as main_queue:
+        main_queue.writelines(bulk_data)
+        main_queue.close()
+
+
+def process_enrollment(update: Update, context: CallbackContext):
 
     global enroll_in_process
 
     if len(qustons_copy['qustons']) == 0:
 
-        bot.waiting_for_admition = True
+        context.waiting_for_admition = True
         enroll_in_process = False
 
-        bot.send_message(
+        context.send_message(
             message.chat.id, text='Заявка заполнена, ожидайте ответ'
         )
 
-        bot.add_to_admition(
-            message.from_user.id, (
-                ('user_id', message.from_user.id),
-                ('first_name', message.from_user.first_name),
-                ('username', message.from_user.username),
+        add_to_waiting_queue(
+            (
+                ('user_id', update.effective_user.id),
+                ('first_name', update.effective_user.name),
+                ('username', update.effective_user.username),
                 ('data', data_container),
-                ('hash', super_hasher(data_container)),
+                ('hash', hasher(data_container)),
+                ('time', datetime.now()),
             )
         )
     else:
         pointer = qustons_copy['qustons'][0]
-        data_container[pointer] = message.text.encode('utf-8')
+        data_container[pointer] = message.text.encode(ENCODING)
 
         bot.send_message(message.chat.id, text=pointer)
 
         del qustons_copy['qustons'][0]
 
 
-@bot.message_handler(commands=['start'])
-def start(message: Message, res=False) -> None:
-    bot.send_message(
-        message.chat.id, major['start'], reply_markup=bot.keyboard_buttons
-    )
-
-
-@bot.message_handler(content_types=['text'])
-def handle_text(message: Message) -> None:
+def handle_text(update: Update, context: CallbackContext) -> None:
 
     global enroll_in_process
 
-    current_chat = message.chat.id
-    current_user = message.from_user.id
-    msg = message.text
-    bot.is_superuser = True if message.from_user.id in SUPERUSERS else False
+    current_chat = update.effective_chat
+    current_user = update.message.from_user.id
+    msg = update.message.text
+    bot = context.bot
 
     if not member(current_user):
 
         if not enroll_in_process:
 
             if msg == 'Вступить' and not bot.waiting_for_admition:
-                bot.send_message(current_chat, text=major['Вступить'][1])
+                bot.send_message(current_chat.id, text=major['Вступить'][1])
                 enroll_in_process = True
 
             elif msg == 'Вступить' and bot.waiting_for_admition:
-                bot.send_message(current_chat, text=major['Вступить'][2])
+                bot.send_message(current_chat.id, text=major['Вступить'][2])
 
-            elif any_button_pressed(message):
-                bot.send_message(current_chat, major[msg][1])
+            elif any_button_pressed(update.message.text):
+                bot.send_message(current_chat.id, major[msg][1])
 
             else:
-                bot.send_message(current_chat, text='Неизвестная команда')
+                bot.send_message(current_chat.id, text='Неизвестная команда')
         else:
-            process_enrollment(message)
+            process_enrollment(update)
 
 
-@bot.message_handler(commands=[*SUPER_ACTIONS[0]])
-def handle_kicks(message: Message) -> None:
+def ban_member(user_id: int) -> None:
 
-    super_message = message.text.split(' ')
+    bot.ban_chat_member(
+        chat_id=PUBLIC_CHAT_ID,
+        user_id=user_id
+    )
 
-    if bot.is_superuser:
-        bot.kick_chat_member(
-            chat_id=super_message[1],
-            user_id=super_message[0],
+
+def add_member(user_id: int) -> None:
+
+    invite_link = bot.createChatInviteLink(
+        chat_id=PUBLIC_CHAT_ID
+    )
+
+    bot.send_message(
+        chat_id=user_id,
+        text=invite_link
+    )
+
+
+def delete_member(user_id: int) -> None:
+
+    with open(str(MEMBERS), 'w') as file:
+        for block in file.readlines():
+            if block.__contains__(str(user_id)):
+                del block
+
+        file.close()
+
+
+def handle_commands(update: Update, context: CallbackContext) -> None:
+
+    msg = update.message.text
+    scalp_message = msg.split()
+    current_user = update.effective_chat.id
+
+    if superuser(current_user) and msg in SUPER_COMMANDS:
+
+        globals()[f'{scalp_message[0]}_member'](user_id=scalp_message[1])
+
+
+def start(update: Update, context: CallbackContext) -> None:
+    context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=major['start'],
+        reply_markup=ReplyKeyboardMarkup(
+            [[
+                'Вступить', 'Документы', 'FAQ', 'Донаты'
+            ]]
         )
+    )
 
 
-@bot.message_handler(commands=[*SUPER_ACTIONS[1]])
-def handle_add(message: Message) -> None:
+def main():
 
-    super_message = message.text.split(' ')
+    bot = Bot(token=TOKEN)
 
-    if bot.is_superuser:
-        bot.send_message(
-            super_message[0],
-            text=bot.create_chat_invite_link(
-                super_message[1]
-            )
-        )
-
-
-@bot.message_handler(commands=[*SUPER_ACTIONS[2]])
-def clear_data(message: Message) -> None:
-
-    if bot.is_superuser:
-        bot.clear_user_data(message.text)
+    updater = Updater(token=TOKEN)
+    updater.dispatcher.add_handler(
+        CommandHandler(SUPER_COMMANDS, handle_commands)
+    )
+    updater.dispatcher.add_handler(MessageHandler(Filters.text, handle_text))
+    updater.start_polling()
+    updater.idle()
 
 
 if __name__ == '__main__':
-    bot.infinity_polling()
+
+    main()
