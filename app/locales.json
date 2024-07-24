@@ -1,0 +1,55 @@
+{
+    "user_start_message": {
+        "ru": "Привет! Я бот для трудоустройства в Synthesis Labs.\nВы можете оставить своё резюме и мы рассмотрим его в ближайшее время.\nСейчас у нас открыты следюущие вакансии:"
+    },
+    "list_of_vacancies_message": {
+        "ru": "Список вакансий:"
+    },
+    "there_are_no_vacancies_yet": {
+        "ru": "Вакансий пока нет, но Вы всё равно можете оставить своё резюме и мы его рассмотрим.",
+        "en": "There are no vacancies yet, but you can still leave your resume and we will consider it."
+    },
+    "vacancy_not_found": {
+        "ru": "Вакансия не найдена.",
+        "en": "Vacancy not found."
+    },
+    "add_vacancy_btn_text": {
+        "ru": "Добавить вакансию"
+    },
+    "add_vacancy_message": {
+        "ru": "Для добавления вакансии на первой строчке сообщения напишите название вакансии (на латинице), а на следующих напишите список требований, обязанности человека и т.п.\nНапример:\nDesigner\nWhat will need to be done:\n...\nWhat is important to us:\n...\nWe offer:\n..."
+    },
+    "edit_vacancy_message": {
+        "ru": "Задайте новое описание вакансии (без названия)."
+    },
+    "new_vacancy_has_opened_message": {
+        "ru": "У нас открылась новая вакансия: {}. Пропишите /start, чтобы увидеть подробности."
+    },
+    "respond_btn_text": {
+        "ru": "Откликнуться"
+    },
+    "back_btn_text": {
+        "ru": "<< Назад"
+    },
+    "resume_message": {
+        "ru": "Заполните, пожалуйста, резюме (одним сообщением): укажите основную и контактную информацию о Вас, Ваши навыки и опыт работы. Можно прикрепить фото (*не документ)."
+    },
+    "resume_message_doesnt_meet_requirements": {
+        "ru": "Отправьте резюме в виде текста или фото."
+    },
+    "resume_has_been_sent_message": {
+        "ru": "Резюме отправлено к нам на рассмотрение. В ближайшее время мы его рассмотрим."
+    },
+    "new_resume_has_been_received": {
+        "ru": "Получено новое резюме",
+        "en": "A new resume has been received.\nPosition: {}.\n"
+    },
+    "user_is_hired": {
+        "ru": "Вы нам подходите. В ближайшее время мы свяжемся с Вами через Telegram или через то, что Вы указывали в резюме.",
+        "en": "You're a good fit for us. In the near future, we will contact you via Telegram or what you indicated in your resume."
+    },
+    "user_is_rejected": {
+        "ru": "К сожалению, Вы нам не подходите. В скором времени у нас появятся новые вакансии. Мы сообщим Вам о них через бота.",
+        "en": "Unfortunately, you are not suitable for us. We will have new vacancies soon. We will inform you about them via the bot."
+    }
+}

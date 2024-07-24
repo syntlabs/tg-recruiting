@@ -1,0 +1,11 @@
+services:
+  app:
+    build: .
+    container_name: tg_recruting_bot
+    command: python main.py
+    restart: always
+    volumes:
+      - ./app:/usr/src/app
+      - ./logs:/usr/log/app
+    env_file:
+      - .env
