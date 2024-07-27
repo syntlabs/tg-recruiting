@@ -99,16 +99,8 @@ cancel_action_markup = InlineKeyboardMarkup(
 
 reply_to_the_resume_markup = InlineKeyboardMarkup(
     inline_keyboard=[
-        [
-            InlineKeyboardButton(
-                text="Accept", callback_data="accept_user_cbd"
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                text="Reject", callback_data="reject_user_cbd"
-            )
-        ],
+        [InlineKeyboardButton(text="Accept", callback_data="accept_user_cbd")],
+        [InlineKeyboardButton(text="Reject", callback_data="reject_user_cbd")],
         [
             InlineKeyboardButton(
                 text="Ask a question", callback_data="ask_question"

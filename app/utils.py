@@ -98,14 +98,21 @@ def load_locales() -> dict:
 def get_user_from_state(
     state: FSMContext, user_id: Union[int, str]
 ) -> Optional[tuple[StorageKey, MemoryStorageRecord]]:
+    def filter_func(record: int) -> bool:
+        nonlocal user_id
+        try:
+            return str(user_id) == str(getattr(record[0], "chat_id"))
+        except AttributeError:
+            return False
+
     try:
         user = next(
             filter(
-                lambda r: str(user_id) == str(getattr(r[0], "chat_id")),
+                filter_func,
                 tuple(state.storage.storage.items()),
             )
         )
-        logger.info(f"{user = }")
+        logger.debug(f"{user = }")
         return user
     except StopIteration:
         return None
@@ -116,45 +123,39 @@ def get_user_from_state(
 async def notify_everyone_user_about_new_vacancy(
     message: Message, state: FSMContext, vacancy_title: str
 ):
-    list_of_unhired_users = tuple(
-        (
-            (getattr(rec[0], "chat_id"), rec[1].data.get("language", "en"))
-            for rec in state.storage.storage.items()
-            if getattr(rec[0], "chat_id") > 0  # Is private chat
-            and not getattr(rec[1], "data").get(
-                "is_hired"
-            )  # User is not hired
-        )
-    )
-
-    users_chunk_size = 15
-    max_notifications_per_minute = 70  # Telegram limits are 100
-
-    users = tuple(
-        (
-            list_of_unhired_users[
-                n_chunk * users_chunk_size : (n_chunk + 1) * users_chunk_size
-            ]
-            for n_chunk in range(
-                ceil(len(list_of_unhired_users) / users_chunk_size)
-            )
-        )
-    )
-
-    for chunk_of_users in users:
-        for user_id, language in chunk_of_users:
-            text = load_locales()["new_vacancy_has_opened_message"][
-                language
-            ].format(vacancy_title)
-            try:
-                await message.bot.send_message(
-                    chat_id=user_id,
-                    text=text,
-                    reply_markup=ReplyKeyboardMarkup(
-                        keyboard=[[KeyboardButton(text="/start")]],
-                        resize_keyboard=True,
-                    ),
+    unhired_users = []
+    for record in state.storage.storage.items():
+        try:
+            # Is private chat and User is not hired
+            if getattr(record[0], "chat_id") > 0 and not getattr(
+                record[1], "data"
+            ).get("is_hired"):
+                unhired_users.append(
+                    (
+                        getattr(record[0], "chat_id"),
+                        record[1].data.get("language", "en"),
+                    )
                 )
-            except Exception as e:
-                logger.error(f"Failed to send message to user {user_id}: {e}")
-            await sleep(60 / max_notifications_per_minute)
+        except AttributeError:
+            pass
+        except Exception as e:
+            logger.error("Error notify everyone user about new vacancy: %s", e)
+
+    max_notifications_per_minute = 70  # Telegram limits are 100 per minute
+
+    for user_id, language in unhired_users:
+        text = load_locales()["new_vacancy_has_opened_message"][
+            language
+        ].format(vacancy_title)
+        try:
+            await message.bot.send_message(
+                chat_id=user_id,
+                text=text,
+                reply_markup=ReplyKeyboardMarkup(
+                    keyboard=[[KeyboardButton(text="/start")]],
+                    resize_keyboard=True,
+                ),
+            )
+        except Exception as e:
+            logger.error(f"Failed to send message to user {user_id}: {e}")
+        await sleep(60 / max_notifications_per_minute)

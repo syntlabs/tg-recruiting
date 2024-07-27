@@ -1,4 +1,5 @@
 from logging import getLogger
+from random import choice
 from os import getenv
 
 from aiogram import Router
@@ -22,9 +23,7 @@ message_header_for_hr_chat = "{user_info}\n{message_title}\n"
 
 @router.message(CommandStart())
 async def handle_start_cmd(message: Message, state: FSMContext):
-    m = await message.answer(
-        text="del kb", reply_markup=ReplyKeyboardRemove()
-    )
+    m = await message.answer(text="del kb", reply_markup=ReplyKeyboardRemove())
     await m.delete()
     await message.answer(
         locales["user_start_message"][message.from_user.language_code],
@@ -57,9 +56,12 @@ async def record_users_resume(message: Message, state: FSMContext):
         ),
     )
 
-    message_to_hr_chat = await message.send_copy(
+    staff_user_ids = await state.storage.get_data("staff")
+    random_staff_user_id = choice(staff_user_ids.get("message_thread_ids"))
+
+    message_to_staff = await message.send_copy(
         chat_id=getenv("staff_chat_id"),
-        message_thread_id=getenv("staff_message_thread_id"),
+        message_thread_id=random_staff_user_id,
     )
     if message.caption:
         header_offset = len(message_header)
@@ -67,16 +69,16 @@ async def record_users_resume(message: Message, state: FSMContext):
             for entity in caption_entities:
                 entity.offset += header_offset
 
-        previous_caption = message_to_hr_chat.caption
+        previous_caption = message_to_staff.caption
 
-        await message_to_hr_chat.edit_caption(
+        await message_to_staff.edit_caption(
             caption=f"{message_header}{previous_caption}",
             caption_entities=caption_entities,
             reply_markup=reply_to_the_resume_markup,
         )
     else:
-        previous_text = message_to_hr_chat.md_text
-        await message_to_hr_chat.edit_text(
+        previous_text = message_to_staff.md_text
+        await message_to_staff.edit_text(
             text=f"{message_header}{previous_text}",
             reply_markup=reply_to_the_resume_markup,
         )
@@ -87,8 +89,11 @@ async def record_users_resume(message: Message, state: FSMContext):
 
 
 @router.message(StateFilter(FSMDialogueWithStaff.in_process))
-async def perform_dialogue_with_staff(message: Message):
+async def perform_dialogue_with_staff(message: Message, state: FSMContext):
+    data = await state.get_data()
+    to_staff = data.get("dialogue_with")
+
     await message.send_copy(
         chat_id=getenv("staff_chat_id"),
-        message_thread_id=getenv("staff_message_thread_id"),
+        message_thread_id=to_staff,
     )

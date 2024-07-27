@@ -4,7 +4,7 @@ from logging import getLogger
 from aiogram import Router, F
 from aiogram.enums import ParseMode
 from aiogram.types import Message
-from aiogram.filters import StateFilter, Command
+from aiogram.filters import StateFilter, Command, IS_ADMIN, ADMINISTRATOR
 from aiogram.fsm.context import FSMContext
 
 from keyboards import create_vacancies_markup
@@ -25,7 +25,7 @@ router.message.filter(F.chat.id == int(getenv("staff_chat_id")))
 
 
 @router.message(Command("menu"))
-async def handle_menu_cmd(message: Message):
+async def handle_menu_cmd(message: Message, state: FSMContext):
     user_language = message.from_user.language_code
     await message.answer(
         text=locales["list_of_vacancies_message"][user_language],
@@ -46,9 +46,7 @@ async def add_vacancy(message: Message, state: FSMContext):
 
     await state.set_state(None)
 
-    await notify_everyone_user_about_new_vacancy(
-        message, state, vacancy_title
-    )
+    await notify_everyone_user_about_new_vacancy(message, state, vacancy_title)
 
 
 @router.message(StateFilter(FSMEditVacancy.in_process))

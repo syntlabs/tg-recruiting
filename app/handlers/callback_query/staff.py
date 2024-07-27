@@ -27,9 +27,7 @@ logger = getLogger(__name__)
 locales = load_locales()
 
 router = Router(name=__name__)
-router.callback_query.filter(
-    F.message.chat.id == int(getenv("staff_chat_id"))
-)
+router.callback_query.filter(F.message.chat.id == int(getenv("staff_chat_id")))
 
 
 @router.callback_query(F.data == "add_vacancy_cbd", StateFilter(None))
@@ -119,6 +117,7 @@ async def ask_question(callback_query: CallbackQuery, state: FSMContext):
         if callback_query.message.text
         else callback_query.message.caption.split("\n", maxsplit=1)[0]
     )
+
     user = get_user_from_state(state, user_id)
 
     await callback_query.bot.send_chat_action(
@@ -127,7 +126,11 @@ async def ask_question(callback_query: CallbackQuery, state: FSMContext):
     await callback_query.answer()
     await state.set_state(FSMDialogueWithUser.in_process)
     await state.update_data({"dialogue_with": user_id})
+    logger.info(f"{user = }")
     user[1].state = FSMDialogueWithStaff.in_process
+    user[1].data.update(
+        {"dialogue_with": callback_query.message.message_thread_id}
+    )
 
 
 async def _perform_action_with_user(
@@ -181,5 +184,5 @@ async def _perform_action_with_user(
             locales["user_is_hired"][user_language]
             if action == "accept"
             else locales["user_is_rejected"][user_language]
-        ),
+        )
     )
